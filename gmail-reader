@@ -1,0 +1,16 @@
+#!/bin/bash
+# Launcher for the read-only gmail-reader CLI. Uses its own venv.
+# Resolve symlinks so this works when invoked via a symlink on your PATH.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+HERE="$(cd "$(dirname "$SOURCE")" && pwd)"
+PY="$HERE/.venv/bin/python"
+if [ ! -x "$PY" ]; then
+  echo "No venv found. Run ./setup.sh in $HERE first." >&2
+  exit 1
+fi
+exec "$PY" "$HERE/gmail_reader.py" "$@"
