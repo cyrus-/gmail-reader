@@ -19,7 +19,7 @@ Commands:
 
 QUERY uses normal Gmail search syntax, e.g.:
   'has:attachment subject:slides after:2026/01/01 before:2026/05/01'
-  'from:student@umich.edu has:attachment filename:pptx'
+  'from:student@example.edu has:attachment filename:pptx'
 """
 import argparse
 import base64
