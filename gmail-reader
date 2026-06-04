@@ -1,16 +1,18 @@
-#!/bin/bash
-# Launcher for the read-only gmail-reader CLI. Uses its own venv.
-# Resolve symlinks so this works when invoked via a symlink on your PATH.
-SOURCE="${BASH_SOURCE[0]}"
-while [ -L "$SOURCE" ]; do
-  DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
-  SOURCE="$(readlink "$SOURCE")"
-  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
-done
-HERE="$(cd "$(dirname "$SOURCE")" && pwd)"
-PY="$HERE/.venv/bin/python"
-if [ ! -x "$PY" ]; then
-  echo "No venv found. Run ./setup.sh in $HERE first." >&2
-  exit 1
-fi
-exec "$PY" "$HERE/gmail_reader.py" "$@"
+#!/usr/bin/env python3
+"""Launcher for gmail-reader: runs gmail_reader.py using this project's own
+venv, resolving symlinks so it works when invoked via a symlink on your PATH.
+Cross-platform (replaces the former bash launcher)."""
+import os
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+_bin = "Scripts" if os.name == "nt" else "bin"
+_exe = "python.exe" if os.name == "nt" else "python"
+venv_python = os.path.join(HERE, ".venv", _bin, _exe)
+script = os.path.join(HERE, "gmail_reader.py")
+
+if not os.path.exists(venv_python):
+    sys.exit(f"No venv found at {venv_python}.\nRun ./setup.sh in {HERE} first.")
+
+sys.exit(subprocess.call([venv_python, script, *sys.argv[1:]]))

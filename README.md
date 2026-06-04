@@ -79,7 +79,7 @@ gmail-reader download "has:attachment filename:pptx" --out ./slides
 
 ## Files
 - `gmail_reader.py` — the CLI
-- `gmail-reader` — launcher (resolves symlinks; uses the local `.venv`)
+- `gmail-reader` — Python launcher (resolves symlinks; uses the local `.venv`)
 - `setup.sh` — creates the venv, installs deps, optional `--link`
 - `requirements.txt` — Python dependencies
 - `credentials.json` / `token.json` — your secrets (gitignored)
