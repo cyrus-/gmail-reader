@@ -9,8 +9,8 @@ modify** mail — the Gmail API rejects any such call for this token.
 ```
 git clone <this-repo> gmail-reader
 cd gmail-reader
-./setup.sh            # create venv + install deps
-./setup.sh --link     # (optional) also symlink `gmail-reader` onto your PATH
+python install.py            # create venv + install deps
+python install.py --link     # (optional) also put `gmail-reader` on your PATH
 ```
 
 Requires Python 3.9+. Everything installs into a local `.venv` — nothing global.
@@ -80,6 +80,7 @@ gmail-reader download "has:attachment filename:pptx" --out ./slides
 ## Files
 - `gmail_reader.py` — the CLI
 - `gmail-reader` — Python launcher (resolves symlinks; uses the local `.venv`)
-- `setup.sh` — creates the venv, installs deps, optional `--link`
+- `install.py` — cross-platform installer (venv + deps, optional `--link`)
+- `gmail-reader.bat` — Windows launcher (uses the local `.venv`)
 - `requirements.txt` — Python dependencies
 - `credentials.json` / `token.json` — your secrets (gitignored)
