@@ -17,25 +17,43 @@ Requires Python 3.9+. Everything installs into a local `.venv` — nothing globa
 
 ## One-time Google setup
 
-### 1. Get an OAuth client secret (Google Cloud Console)
+> Google recently renamed the "OAuth consent screen" to the **Google Auth
+> Platform**. These steps match the current (2025+) console.
+
+### 1. Create a project and enable the Gmail API
 1. Go to <https://console.cloud.google.com/> and create a project (or pick one).
 2. **APIs & Services → Library →** search "Gmail API" → **Enable**.
-3. **APIs & Services → OAuth consent screen:**
-   - User type: **External** → Create.
-   - Fill app name + your email; Save.
-   - **Test users:** add your own Gmail address.
-     (Test mode is fine forever for personal use — no app verification needed.)
-   - **Scopes:** leave blank; the CLI requests `gmail.readonly` at runtime.
-4. **APIs & Services → Credentials → Create Credentials → OAuth client ID:**
+
+### 2. Configure the Google Auth Platform
+3. Open **APIs & Services → OAuth consent screen** (a.k.a. Google Auth
+   Platform). If you see *"Google Auth Platform not configured yet"*, click
+   **Get started** and complete the wizard:
+   - **App Information:** app name (e.g. `gmail-reader`) + a user support email.
+   - **Audience:** choose **External**. (Internal only applies to Google
+     Workspace orgs. External + test mode is free and permanent for personal
+     use — no app verification needed.)
+   - **Contact Information:** your email.
+   - **Finish:** agree to the policy and create.
+4. Still under the Google Auth Platform, open **Audience → Test users →
+   Add users** and add your own Gmail address. In test mode only listed users
+   can authorize; without this, `gmail-reader auth` is blocked.
+   - You can ignore the "Sign in with Google" branding and the Scopes screens —
+     the CLI requests the `gmail.readonly` scope itself at runtime.
+
+### 3. Create the OAuth client (the credentials.json)
+5. Open **Clients → Create client** (under the Google Auth Platform; older
+   consoles list this as **Credentials → Create Credentials → OAuth client ID**).
    - Application type: **Desktop app** → Create.
    - **Download JSON** and save it as **`credentials.json`** in this project
      folder (next to `gmail_reader.py`).
 
-### 2. Authorize
+### 4. Authorize
 ```
 ./gmail-reader auth      # or just `gmail-reader auth` if you used --link
 ```
-Opens a browser, you approve, and a `token.json` is cached in this folder. Once.
+Opens a browser, you approve (you'll see an "unverified app" notice — that's
+expected for a personal test-mode app; click through via **Advanced → Go to
+gmail-reader**), and a `token.json` is cached in this folder. Done once.
 
 ## Usage
 ```
