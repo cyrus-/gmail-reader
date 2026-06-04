@@ -1,6 +1,6 @@
 # Never commit secrets or the venv
 credentials.json
-token.json
+token*.json
 .venv/
 __pycache__/
 *.pyc
