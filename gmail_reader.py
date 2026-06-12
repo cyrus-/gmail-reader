@@ -158,8 +158,7 @@ def _html_to_text(s):
     return "\n".join(line.strip() for line in s.splitlines()).strip()
 
 
-def _message_text(msg):
-    """Prefer text/plain; fall back to stripped text/html."""
+def _message_parts(msg):
     plain, htmltext = [], []
     for part in _walk_parts(msg.get("payload")):
         if part.get("filename"):
@@ -169,9 +168,23 @@ def _message_text(msg):
             plain.append(_decode_body(part))
         elif mime == "text/html":
             htmltext.append(_decode_body(part))
+    return plain, htmltext
+
+
+def _message_text(msg):
+    """Prefer text/plain; fall back to stripped text/html."""
+    plain, htmltext = _message_parts(msg)
     if any(p.strip() for p in plain):
         return "\n".join(plain).strip()
     return _html_to_text("\n".join(htmltext))
+
+
+def _message_html(msg):
+    """Raw text/html body; fall back to plain text wrapped in <pre>."""
+    plain, htmltext = _message_parts(msg)
+    if any(h.strip() for h in htmltext):
+        return "\n".join(htmltext)
+    return "<pre>" + html.escape("\n".join(plain)) + "</pre>"
 
 
 def cmd_show(args):
@@ -183,9 +196,12 @@ def cmd_show(args):
             sys.exit("Provide a QUERY or --ids ID[,ID...]")
         ids = list(_iter_message_ids(svc, args.query, args.max))
     for i, mid in enumerate(ids):
+        msg = svc.users().messages().get(userId="me", id=mid, format="full").execute()
+        if args.html:
+            print(_message_html(msg))
+            continue
         if i:
             print("\n" + "=" * 78 + "\n")
-        msg = svc.users().messages().get(userId="me", id=mid, format="full").execute()
         print(f"[{mid}] {_header(msg, 'Date')}")
         print(f"From:    {_header(msg, 'From')}")
         print(f"Subject: {_header(msg, 'Subject')}\n")
@@ -264,6 +280,8 @@ def main():
     wp.add_argument("query", nargs="?", help="Gmail search query (omit if using --ids)")
     wp.add_argument("--ids", help="Comma-separated message ids to show directly")
     wp.add_argument("--max", type=int, default=20)
+    wp.add_argument("--html", action="store_true",
+                    help="Output raw text/html body (for rendering/conversion)")
     wp.set_defaults(func=cmd_show)
 
     dp = sub.add_parser("download", help="Download attachments from matching messages")
