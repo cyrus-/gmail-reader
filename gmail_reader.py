@@ -13,6 +13,9 @@ Commands:
   auth                         Run the one-time OAuth flow; cache the token.
   whoami                       Print the authorized address + granted scopes.
   search "QUERY" [--max N]     List messages matching a Gmail search query.
+  show "QUERY" [--max N]       Print the text body of matching messages.
+  show --ids ID[,ID...]        Print the text body of specific message ids
+                               (the [bracketed] ids printed by `search`).
   download "QUERY" --out DIR   Download all attachments from matching messages.
                                Writes a manifest.csv mapping each file to its
                                sender / subject / date / message id.
@@ -24,6 +27,7 @@ QUERY uses normal Gmail search syntax, e.g.:
 import argparse
 import base64
 import csv
+import html
 import os
 import re
 import sys
@@ -135,6 +139,59 @@ def _walk_parts(part):
         yield from _walk_parts(sub)
 
 
+def _decode_body(part):
+    data = part.get("body", {}).get("data", "")
+    if not data:
+        return ""
+    return base64.urlsafe_b64decode(data.encode("utf-8")).decode("utf-8", "replace")
+
+
+def _html_to_text(s):
+    s = re.sub(r"(?is)<(script|style|head)[^>]*>.*?</\1>", "", s)
+    s = re.sub(r"(?i)<br\s*/?>", "\n", s)
+    s = re.sub(r"(?i)</(p|div|tr|li|h[1-6]|table)>", "\n", s)
+    s = re.sub(r"(?i)</td>", "\t", s)
+    s = re.sub(r"<[^>]+>", "", s)
+    s = html.unescape(s)
+    s = re.sub(r"[ \t]+", " ", s)
+    s = re.sub(r"\n\s*\n\s*\n+", "\n\n", s)
+    return "\n".join(line.strip() for line in s.splitlines()).strip()
+
+
+def _message_text(msg):
+    """Prefer text/plain; fall back to stripped text/html."""
+    plain, htmltext = [], []
+    for part in _walk_parts(msg.get("payload")):
+        if part.get("filename"):
+            continue
+        mime = part.get("mimeType", "")
+        if mime == "text/plain":
+            plain.append(_decode_body(part))
+        elif mime == "text/html":
+            htmltext.append(_decode_body(part))
+    if any(p.strip() for p in plain):
+        return "\n".join(plain).strip()
+    return _html_to_text("\n".join(htmltext))
+
+
+def cmd_show(args):
+    svc = get_service()
+    if args.ids:
+        ids = [i.strip() for i in args.ids.split(",") if i.strip()]
+    else:
+        if not args.query:
+            sys.exit("Provide a QUERY or --ids ID[,ID...]")
+        ids = list(_iter_message_ids(svc, args.query, args.max))
+    for i, mid in enumerate(ids):
+        if i:
+            print("\n" + "=" * 78 + "\n")
+        msg = svc.users().messages().get(userId="me", id=mid, format="full").execute()
+        print(f"[{mid}] {_header(msg, 'Date')}")
+        print(f"From:    {_header(msg, 'From')}")
+        print(f"Subject: {_header(msg, 'Subject')}\n")
+        print(_message_text(msg) or "(no text body found)")
+
+
 def cmd_download(args):
     svc = get_service()
     out = os.path.abspath(os.path.expanduser(args.out))
@@ -202,6 +259,12 @@ def main():
     sp.add_argument("query")
     sp.add_argument("--max", type=int, default=200)
     sp.set_defaults(func=cmd_search)
+
+    wp = sub.add_parser("show", help="Print the text body of matching messages")
+    wp.add_argument("query", nargs="?", help="Gmail search query (omit if using --ids)")
+    wp.add_argument("--ids", help="Comma-separated message ids to show directly")
+    wp.add_argument("--max", type=int, default=20)
+    wp.set_defaults(func=cmd_show)
 
     dp = sub.add_parser("download", help="Download attachments from matching messages")
     dp.add_argument("query")
