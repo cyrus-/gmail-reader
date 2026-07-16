@@ -33,6 +33,7 @@ import re
 import sys
 from datetime import datetime, timezone
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -52,8 +53,14 @@ def get_service():
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
+            try:
+                creds.refresh(Request())
+            except RefreshError:
+                # Token revoked or expired server-side (e.g. testing-mode
+                # OAuth apps expire refresh tokens after 7 days). Fall back
+                # to a fresh interactive flow instead of crashing.
+                creds = None
+        if not creds or not creds.valid:
             if not os.path.exists(CREDS_FILE):
                 sys.exit(
                     f"Missing {CREDS_FILE}.\n"
